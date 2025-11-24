@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- <!DOCTYPE xml> ใน version 10 ห้ามใส่ตัวนี้  -->
+<zk>
+	<!-- client-config -->
+	<client-config>
+		<disable-behind-modal>false</disable-behind-modal>
+	</client-config>
+
+	<!-- desktop-config -->
+	<desktop-config>
+		<desktop-timeout>3600</desktop-timeout>
+		<!-- <disable-theme-uri>~./zul/css/zk.wcs</disable-theme-uri> -->
+<!-- 		<theme-uri>/mystyle8.0.2.2.css</theme-uri> -->
+<!-- 		<theme-uri>/mystyle8.6.0.1.css</theme-uri> -->
+		<theme-uri>/css/my.css</theme-uri>
+	</desktop-config>
+
+	<!-- device-config -->
+	<device-config>
+		<device-type>ajax</device-type>
+		<timeout-uri>/index.zul</timeout-uri>
+		<embed><![CDATA[
+    ]]></embed>
+	</device-config>
+
+	<!-- library-property -->
+	<library-property>
+		<name>org.zkoss.web.preferred.locale</name>
+		<value>th</value>
+	</library-property>
+	
+	<library-property>
+    	<name>org.zkoss.theme.preferred</name>
+    	<value>sapphire</value>
+    	<!--<value>deepsea</value>--> <!-- no whitespace in theme names -->
+	</library-property>
+
+	<!-- session-config -->
+	<session-config>
+		<!-- <session-timeout>1800</session-timeout>  -->
+		<!-- true = ทำให้ timer เวลา Ontime ทำงานเหมือนคันคน click ที่หน้าจอ -->
+		<timer-keep-alive>true</timer-keep-alive>
+		<!-- <max-desktops-per-session>15</max-desktops-per-session> -->
+		<max-requests-per-session>1</max-requests-per-session>
+		<!-- <max-pushes-per-session>3</max-pushes-per-session> -->
+	</session-config>
+
+	<!-- system-config -->
+	<system-config>
+<!-- 		<disable-event-thread>false</disable-event-thread> -->
+		<!-- disable-event-thread จะหายไปใน Version zk 8 -->
+		<ui-factory-class>org.zkoss.zk.ui.http.SerializableUiFactory</ui-factory-class>
+	</system-config> 
+
+	<!-- language-config -->
+	<language-config>
+		<addon-uri>/WEB-INF/lang-addon.xml</addon-uri>
+	</language-config>
+
+<!-- 	listener
+    <listener>
+		<listener-class>com.pcc.sys.lib.MyAppInit</listener-class>
+	</listener>	
+   -->
+</zk>
