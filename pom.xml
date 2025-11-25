@@ -10,6 +10,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <jetty-version>12.0.27</jetty-version>
         <zk.version>10.0.0-jakarta</zk.version>
+        <cxf.version>4.1.2</cxf.version> 
     </properties>
 
     <dependencies>
@@ -49,6 +50,37 @@
 			<version>${zk.version}</version>
 		</dependency>
 		<!-- end zul config -->
+		
+		<!-- cxf for soap -->
+		<dependency>
+	        <groupId>org.apache.cxf</groupId>
+	        <artifactId>cxf-rt-frontend-jaxws</artifactId>
+	        <version>${cxf.version}</version>
+	    </dependency>
+	    <dependency>
+	        <groupId>org.apache.cxf</groupId>
+	        <artifactId>cxf-rt-transports-http-jetty</artifactId>
+	        <version>${cxf.version}</version>
+	        <exclusions>
+	        	<exclusion>
+	        		<groupId>org.eclipse.jetty</groupId>
+	        		<artifactId>jetty-server</artifactId>
+	        	</exclusion>
+	        	<exclusion>
+	        		<groupId>org.eclipse.jetty</groupId>
+	        		<artifactId>jetty-http</artifactId>
+	        	</exclusion>
+	        	<exclusion>
+	        		<groupId>org.eclipse.jetty</groupId>
+	        		<artifactId>jetty-security</artifactId>
+	        	</exclusion>
+	        	<exclusion>
+	        		<groupId>org.eclipse.jetty</groupId>
+	        		<artifactId>jetty-util</artifactId>
+	        	</exclusion>
+	        </exclusions>
+	    </dependency>
+	    <!-- end cxf for soap -->
 		
     </dependencies>
 
@@ -104,4 +136,13 @@
 		
 	</build>
 	
+    <dependencyManagement>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.eclipse.jetty</groupId>
+    			<artifactId>jetty-io</artifactId>
+    			<version>12.0.27</version>
+    		</dependency>
+    	</dependencies>
+    </dependencyManagement>
 </project>

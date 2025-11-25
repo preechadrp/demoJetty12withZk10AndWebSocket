@@ -5,8 +5,14 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.concurrent.Executors;
 
+import org.apache.cxf.Bus;
+import org.apache.cxf.BusFactory;
+import org.apache.cxf.jaxws.EndpointImpl;
+import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.ee10.webapp.WebAppContext;
+import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -17,228 +23,227 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class Main {
 
-	static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Main.class);
+    static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Main.class);
 
-	public Server server = null;
-	private int server_port = 8080;
-	public static Main main = null;
+    public Server server = null;
+    private int server_port = 8080;
+    public static Main main = null;
 
-	/**
-	 * นำไปใช้กับ apache procrun ตอน start service ได้ด้วย
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		if (args != null && args.length > 0 && args[0].trim().equals("shutdown")) {
-			stopServiceByUrl();
-		} else {
-			main = new Main();
-			main.startServer();
-		}
-	}
+    public static void main(String[] args) {
+        if (args != null && args.length > 0 && args[0].trim().equals("shutdown")) {
+            stopServiceByUrl();
+        } else {
+            main = new Main();
+            main.startServer();
+        }
+    }
+    
+    private static void stopServiceByUrl() {
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
 
-	private static void stopServiceByUrl() {
-		try {
-			java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://127.0.0.1:8080/shutdown?token=secret123"))
+                    .GET()
+                    .build();
 
-			java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-					.uri(java.net.URI.create("http://127.0.0.1:8080/shutdown?token=secret123"))
-					.GET()
-					.build();
+            // ส่ง Request และรับ Response
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
 
-			// ส่ง Request และรับ Response
-			java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            // แสดงผลลัพธ์
+            if (response.statusCode() != 200) {
+                log.info("Status code: {}", response.statusCode());
+                log.info(response.body());
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 
-			// แสดงผลลัพธ์
-			if (response.statusCode() != 200) {
-				log.info("Status code: {}", response.statusCode());
-				log.info(response.body());
-			}
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-		}
-	}
+    public static void stopService(String[] args) {
+        main.stopServer();
+    }
 
-	/**
-	 * นำไปใช้กับ apache procrun ตอน stop service
-	 * @param args
-	 */
-	public static void stopService(String[] args) {
-		main.stopServer();
-	}
+    public void startServer() {
+        try {
+            var threadPool = new QueuedThreadPool();
+            threadPool.setVirtualThreadsExecutor(Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("jetty-vt-", 0).factory()));
 
-	public void startServer() {
-		try {
+            server = new Server(threadPool);
 
-			// == ตัวอย่าง
-			// ใช้ jetty-ee10-webapp 12.0.23
-			// การหา resource แบบปลอดภัย
-			// ทำ stop gracefull
+            ServerConnector httpConnector = new ServerConnector(server);
+            httpConnector.setPort(server_port);
+            server.addConnector(httpConnector);
 
-			var threadPool = new QueuedThreadPool();
-			//กำหนดให้ทำงานแบบ Virtual Threads
-			//สามารถกำหนดชื่อ prefix ของ Virtual Threads ได้เพื่อการ Debug
-			threadPool.setVirtualThreadsExecutor(Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("jetty-vt-", 0).factory()));
+            addContext();
 
-			server = new Server(threadPool);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> stopServer()));
 
-			ServerConnector httpConnector = new ServerConnector(server);
-			httpConnector.setPort(server_port);
-			server.addConnector(httpConnector);
+            server.setStopTimeout(60000l);
+            server.start();
 
-			addContext();
+            // ตัวอย่างการ Broadcast จาก Server
+            new Thread(() -> {
+                int count = 0;
+                while (server.isRunning()) {
+                    try {
+                        Thread.sleep(5000);
+                        String message = "Server Broadcast #" + (++count) + " @ " + System.currentTimeMillis();
+                        // เรียกใช้ BroadcastSocket.broadcast
+                        BroadcastSocket.broadcast(message); 
+                        System.out.println("SERVER ACTION: Broadcasted: " + message);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }).start();
 
-			Runtime.getRuntime().addShutdownHook(new Thread(() -> stopServer()));
+            server.join();
 
-			server.setStopTimeout(60000l);// รอ 60 นาทีก่อนจะบังคับปิด
-			server.start();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
 
-			// ตัวอย่างการ Broadcast จาก Server (เหมือนเดิม)
-			new Thread(() -> {
-				int count = 0;
-				while (server.isRunning()) {
-					try {
-						Thread.sleep(5000);
-						String message = "Server Broadcast #" + (++count) + " @ " + System.currentTimeMillis();
-						BroadcastSocket.broadcast(message);
-						System.out.println("SERVER ACTION: Broadcasted: " + message);
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						break;
-					}
-				}
-			}).start();
+    public void stopServer() {
+        try {
+            if (server != null && server.isRunning()) {
+                log.warn("init stop");
+                server.stop();
+                log.info("Jetty server stopped gracefully");
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+    // ----------------------------------------------------------------------
+    // ส่วนสำคัญ: การกำหนดค่า ContextHandler
+    // ----------------------------------------------------------------------
+    private void addContext() throws URISyntaxException, IOException {
 
-			server.join();
+        var context = new WebAppContext();
 
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-		}
-	}
+        // set web resource
+        URL rscURL = Main.class.getResource("/webapp");
+        log.info("Using BaseResource: " + rscURL.toExternalForm());
+        context.setBaseResourceAsString(rscURL.toExternalForm());
+        context.setContextPath("/");
+        context.setWelcomeFiles(new String[] { "index.zul" });
+        context.setParentLoaderPriority(true);
 
-	public void stopServer() {
-		try {
-			// ใช้เวลาหยุดเซิร์ฟเวอร์
-			if (server != null && server.isRunning()) {
-				log.warn("init stop");
-				server.stop();
-				log.info("Jetty server stopped gracefully");
-			}
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-		}
-	}
+        // 1. เพิ่ม Default Servlet, Shutdown, และ Blocking API
+        context.addServlet(new DefaultServlet(), "/");
+        addServlet(context);
 
-	private void addContext() throws URISyntaxException, IOException {
+        // 2. config for support zk framework
+        org.eclipse.jetty.ee10.servlet.ServletHolder zkLoaderHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
+        zkLoaderHolder.setInitParameter("update-uri", "/zkau");
+        zkLoaderHolder.setInitOrder(1);
+        context.addServlet(zkLoaderHolder, "*.zul");
+        context.addServlet(org.zkoss.zk.au.http.DHtmlUpdateServlet.class, "/zkau/*");
+        context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
 
-		var context = new WebAppContext();
+        // 3. ตั้งค่า WebSocket (ต้องใช้ JakartaWebSocketServletContainerInitializer)
+        JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
+            // ลงทะเบียน Endpoint
+            container.addEndpoint(BroadcastSocket.class); 
+        });
 
-		// set web resource
-		URL rscURL = Main.class.getResource("/webapp");
-		log.info("Using BaseResource: " + rscURL.toExternalForm());
-		context.setBaseResourceAsString(rscURL.toExternalForm());
-		context.setContextPath("/");
-		context.setWelcomeFiles(new String[] { "index.zul" });
-		context.setParentLoaderPriority(true);
-		// context.getSessionHandler().setMaxInactiveInterval(900);//ไม่ผ่านต้องใช้ไฟล์ /WEB-INF/web.xml ถึงจะผ่าน ,test 7/7/68
+        // 4. ตั้งค่า CXF (SOAP)
+        // **ส่วนที่แก้ไขเพื่อให้ทำงานได้แน่นอน**
+        Bus bus = BusFactory.getDefaultBus(); // สร้าง Bus หลัก
+        context.setAttribute(BusFactory.class.getName(), bus); // ผูก Bus เข้ากับ Context
+        
+        CXFNonSpringServlet cxfServlet = new CXFNonSpringServlet();
+        cxfServlet.setBus(bus); // ผูก Bus เข้ากับ Servlet โดยตรง **สำคัญ**
+        
+        ServletHolder servletHolder = new ServletHolder(cxfServlet);
+        context.addServlet(servletHolder, "/soapapi/*"); // CXF จัดการที่ /soapapi/*
 
-		// เพิ่ม Default Servlet เพื่อจัดการไฟล์ Static (เช่น HTML, CSS) และเป็นตัว fallback 
-		context.addServlet(new DefaultServlet(), "/");
+        // 5. ลงทะเบียน Service
+        EndpointImpl endpoint = new EndpointImpl(bus, new SimpleServiceImpl());
+        endpoint.publish("/simple1");
+        
+        String baseUrl = "http://localhost:8080/soapapi";
+        System.out.println("Server Started at http://localhost:8080");
+        System.out.println("WSDL 1 (Simple 1): " + baseUrl + "/simple1" + "?wsdl");
 
-		// add servlet ที่เป็น api ของเรา
-		addServlet(context);
+        server.setHandler(context);
+    }
+    
+    // ... (เมธอด addServlet เหมือนเดิม) ...
+    private void addServlet(WebAppContext context) {
 
-		//=== cofig for support zk framework ===//
-		//เพิ่ม ServletHolder ของ zk framework แทนการใช้ web.xml
-		org.eclipse.jetty.ee10.servlet.ServletHolder zkLoaderHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
-		zkLoaderHolder.setInitParameter("update-uri", "/zkau");
-		zkLoaderHolder.setInitOrder(1);
-		context.addServlet(zkLoaderHolder, "*.zul");
-		context.addServlet(org.zkoss.zk.au.http.DHtmlUpdateServlet.class, "/zkau/*");
-		context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
-		//=== end config for support zk framework ===//
+        //สำหรับ shutdown ด้วย winsw/curl ด้วย
+        context.addServlet(new jakarta.servlet.http.HttpServlet() {
 
-		// ตั้งค่า WebSocket
-		org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
-			// ลงทะเบียน Endpoint
-			container.addEndpoint(BroadcastSocket.class);
-		});
+            private static final long serialVersionUID = -1079681049977214895L;
 
-		server.setHandler(context);
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                    throws ServletException, IOException {
 
-	}
+                log.info("Requested Shutdown");
 
-	private void addServlet(WebAppContext context) {
+                //จำกัดให้เรียกได้เฉพาะ localhost
+                String remoteAddr = request.getRemoteAddr();
+                if (!"127.0.0.1".equals(remoteAddr) && !"0:0:0:0:0:0:0:1".equals(remoteAddr)) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().println("Access denied");
+                    log.warn("Rejected shutdown from: {}", remoteAddr);
+                    return;
+                }
 
-		//สำหรับ shutdown ด้วย winsw/curl ด้วย
-		context.addServlet(new jakarta.servlet.http.HttpServlet() {
+                //ตรวจ token
+                String tokenParam = request.getParameter("token");
+                if (!"secret123".equals(tokenParam)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().println("Invalid token");
+                    log.warn("Invalid token");
+                    return;
+                }
 
-			private static final long serialVersionUID = -1079681049977214895L;
+                //เริ่มหยุด Jetty
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().println("Shutting down Jetty...");
 
-			@Override
-			protected void doGet(HttpServletRequest request, HttpServletResponse response)
-					throws ServletException, IOException {
+                log.warn(">>> Shutdown requested via /shutdown from {}", remoteAddr);
 
-				log.info("Requested Shutdown");
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(500); // รอให้ response ส่งกลับ
+                        server.stop();
+                        log.info("Jetty server stopped gracefully.");
+                    } catch (Exception e) {
+                        log.error(e.getMessage(), e);
+                    }
+                }).start();
 
-				//จำกัดให้เรียกได้เฉพาะ localhost
-				String remoteAddr = request.getRemoteAddr();
-				if (!"127.0.0.1".equals(remoteAddr) && !"0:0:0:0:0:0:0:1".equals(remoteAddr)) {
-					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-					response.getWriter().println("Access denied");
-					log.warn("Rejected shutdown from: {}", remoteAddr);
-					return;
-				}
+            }
 
-				//ตรวจ token
-				String tokenParam = request.getParameter("token");
-				if (!"secret123".equals(tokenParam)) {
-					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-					response.getWriter().println("Invalid token");
-					log.warn("Invalid token");
-					return;
-				}
+        }, "/shutdown");// test link = http://localhost:8080/shutdown
 
-				//เริ่มหยุด Jetty
-				response.setStatus(HttpServletResponse.SC_OK);
-				response.getWriter().println("Shutting down Jetty...");
+        context.addServlet(new jakarta.servlet.http.HttpServlet() {
 
-				log.warn(">>> Shutdown requested via /shutdown from {}", remoteAddr);
+            private static final long serialVersionUID = -1079681049977214895L;
 
-				new Thread(() -> {
-					try {
-						Thread.sleep(500); // รอให้ response ส่งกลับ
-						server.stop();
-						log.info("Jetty server stopped gracefully.");
-					} catch (Exception e) {
-						log.error(e.getMessage(), e);
-					}
-				}).start();
+            @Override
+            protected void doPost(HttpServletRequest request, HttpServletResponse response)
+                    throws ServletException, IOException {
 
-			}
+                log.info("Request handled by thread: {}", Thread.currentThread().getName());
+                log.info("call /api/blocking");
+                log.info("request.getSession().getId() : {}", request.getSession(true).getId());
+                log.info("session timeout : {}", request.getSession().getMaxInactiveInterval());// seconds unit
 
-		}, "/shutdown");// test link = http://localhost:8080/shutdown
+                response.setContentType("application/json");
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().println("{ \"status\": \"ok\"}");
 
-		context.addServlet(new jakarta.servlet.http.HttpServlet() {
+            }
 
-			private static final long serialVersionUID = -1079681049977214895L;
+        }, "/api/blocking");// test link = http://localhost:8080/api/blocking
 
-			@Override
-			protected void doPost(HttpServletRequest request, HttpServletResponse response)
-					throws ServletException, IOException {
-
-				log.info("Request handled by thread: {}", Thread.currentThread().getName());
-				log.info("call /api/blocking");
-				log.info("request.getSession().getId() : {}", request.getSession(true).getId());
-				log.info("session timeout : {}", request.getSession().getMaxInactiveInterval());// seconds unit
-
-				response.setContentType("application/json");
-				response.setStatus(HttpServletResponse.SC_OK);
-				response.getWriter().println("{ \"status\": \"ok\"}");
-
-			}
-
-		}, "/api/blocking");// test link = http://localhost:8080/api/blocking
-
-	}
-
+    }
 }
