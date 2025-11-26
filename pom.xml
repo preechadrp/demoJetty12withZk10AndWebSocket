@@ -7,9 +7,8 @@
   
 	<properties>
     	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <jetty-version>12.0.27</jetty-version>
+        <java.version>21</java.version>
+        <jetty-version>12.0.30</jetty-version>
         <zk.version>10.0.0-jakarta</zk.version>
         <cxf.version>4.1.2</cxf.version> 
     </properties>
@@ -107,6 +106,11 @@
     			<artifactId>commons-io</artifactId>
     			<version>2.15.1</version>
     		</dependency>
+    		<dependency>
+    			<groupId>org.ow2.asm</groupId>
+    			<artifactId>asm</artifactId>
+    			<version>9.9</version>
+    		</dependency>
     	</dependencies>
     </dependencyManagement>
 
@@ -118,7 +122,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<release>${maven.compiler.source}</release>
+					<release>${java.version}</release>
 				</configuration>
 			</plugin>
 
