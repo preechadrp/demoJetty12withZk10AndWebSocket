@@ -1,10 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.example</groupId>
-  <artifactId>demoJetty12withZk10AndWebSocket</artifactId>
-  <version>0.0.1</version>
+	
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.example</groupId>
+	<artifactId>demoJetty12withZk10AndWebSocket</artifactId>
+	<version>0.0.1</version>
   
-  <properties>
+	<properties>
     	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -14,6 +15,13 @@
     </properties>
 
     <dependencies>
+
+		<!-- https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server -->
+		<dependency>
+		    <groupId>org.eclipse.jetty</groupId>
+		    <artifactId>jetty-server</artifactId>
+		    <version>${jetty-version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.eclipse.jetty.ee10</groupId>
@@ -61,28 +69,46 @@
 	        <groupId>org.apache.cxf</groupId>
 	        <artifactId>cxf-rt-transports-http-jetty</artifactId>
 	        <version>${cxf.version}</version>
-	        <exclusions>
-	        	<exclusion>
-	        		<groupId>org.eclipse.jetty</groupId>
-	        		<artifactId>jetty-server</artifactId>
-	        	</exclusion>
-	        	<exclusion>
-	        		<groupId>org.eclipse.jetty</groupId>
-	        		<artifactId>jetty-http</artifactId>
-	        	</exclusion>
-	        	<exclusion>
-	        		<groupId>org.eclipse.jetty</groupId>
-	        		<artifactId>jetty-security</artifactId>
-	        	</exclusion>
-	        	<exclusion>
-	        		<groupId>org.eclipse.jetty</groupId>
-	        		<artifactId>jetty-util</artifactId>
-	        	</exclusion>
-	        </exclusions>
 	    </dependency>
 	    <!-- end cxf for soap -->
 		
     </dependencies>
+    
+    <!-- ช่วย lock version กรณีด้านบน dependency หลาย version -->
+    <dependencyManagement>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.eclipse.jetty</groupId>
+    			<artifactId>jetty-io</artifactId>
+    			<version>${jetty-version}</version>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.eclipse.jetty</groupId>
+    			<artifactId>jetty-security</artifactId>
+    			<version>${jetty-version}</version>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.eclipse.jetty</groupId>
+    			<artifactId>jetty-util</artifactId>
+    			<version>${jetty-version}</version>
+    		</dependency>
+    		<dependency>
+    			<groupId>jakarta.annotation</groupId>
+    			<artifactId>jakarta.annotation-api</artifactId>
+    			<version>2.1.1</version>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.slf4j</groupId>
+    			<artifactId>slf4j-api</artifactId>
+    			<version>2.0.17</version>
+    		</dependency>
+    		<dependency>
+    			<groupId>commons-io</groupId>
+    			<artifactId>commons-io</artifactId>
+    			<version>2.15.1</version>
+    		</dependency>
+    	</dependencies>
+    </dependencyManagement>
 
     <build>
 
@@ -135,14 +161,5 @@
 		</plugins>
 		
 	</build>
-	
-    <dependencyManagement>
-    	<dependencies>
-    		<dependency>
-    			<groupId>org.eclipse.jetty</groupId>
-    			<artifactId>jetty-io</artifactId>
-    			<version>12.0.27</version>
-    		</dependency>
-    	</dependencies>
-    </dependencyManagement>
+    
 </project>

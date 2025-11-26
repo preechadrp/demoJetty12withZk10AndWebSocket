@@ -117,10 +117,9 @@ public class Main {
             log.error(e.getMessage(), e);
         }
     }
-    // ----------------------------------------------------------------------
-    // ส่วนสำคัญ: การกำหนดค่า ContextHandler
-    // ----------------------------------------------------------------------
-    private void addContext() throws URISyntaxException, IOException {
+
+    @SuppressWarnings("resource")
+	private void addContext() throws URISyntaxException, IOException {
 
         var context = new WebAppContext();
 

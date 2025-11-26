@@ -10,9 +10,7 @@ import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zul.Button;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Window;
-import org.zkoss.zul.Window;
 
-//public class C1 extends SelectorComposer <Window>{
 public class C1 extends SelectorComposer<Div> {
 	private static final long serialVersionUID = 1L;
 
