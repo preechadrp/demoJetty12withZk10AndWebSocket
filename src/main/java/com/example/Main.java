@@ -87,11 +87,11 @@ public class Main {
                 int count = 0;
                 while (server.isRunning()) {
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(2000);
                         String message = "Server Broadcast #" + (++count) + " @ " + System.currentTimeMillis();
                         // เรียกใช้ BroadcastSocket.broadcast
                         BroadcastSocket.broadcast(message); 
-                        System.out.println("SERVER ACTION: Broadcasted: " + message);
+                        log.info("SERVER ACTION: Broadcasted: " + message);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
@@ -165,8 +165,8 @@ public class Main {
         endpoint.publish("/simple1");
         
         String baseUrl = "http://localhost:8080/soapapi";
-        System.out.println("Server Started at http://localhost:8080");
-        System.out.println("WSDL 1 (Simple 1): " + baseUrl + "/simple1" + "?wsdl");
+        log.info("Server Started at http://localhost:8080");
+        log.info("WSDL 1 (Simple 1): {}/simple1?wsdl", baseUrl);
 
         server.setHandler(context);
     }
