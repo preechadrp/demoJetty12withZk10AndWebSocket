@@ -10,8 +10,8 @@ import org.apache.cxf.BusFactory;
 import org.apache.cxf.jaxws.EndpointImpl;
 import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.servlet.ServletHolder;
-import org.eclipse.jetty.ee10.webapp.WebAppContext;
 import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -121,7 +121,7 @@ public class Main {
     @SuppressWarnings("resource")
 	private void addContext() throws URISyntaxException, IOException {
 
-        var context = new WebAppContext();
+    	ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);//api ไม่จำเป็นต้องใช้ session
 
         // set web resource
         URL rscURL = Main.class.getResource("/webapp");
@@ -129,7 +129,9 @@ public class Main {
         context.setBaseResourceAsString(rscURL.toExternalForm());
         context.setContextPath("/");
         context.setWelcomeFiles(new String[] { "index.zul" });
-        context.setParentLoaderPriority(true);
+		if (context.getSessionHandler() != null) {
+			context.getSessionHandler().setMaxInactiveInterval(900);//กรณีใช้ ServletContextHandler จะผ่าน ,test 30/7/68
+		}
 
         // 1. เพิ่ม Default Servlet, Shutdown, และ Blocking API
         context.addServlet(new DefaultServlet(), "/");
@@ -172,7 +174,7 @@ public class Main {
     }
     
     // ... (เมธอด addServlet เหมือนเดิม) ...
-    private void addServlet(WebAppContext context) {
+    private void addServlet(ServletContextHandler context) {
 
         //สำหรับ shutdown ด้วย winsw/curl ด้วย
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
@@ -228,7 +230,7 @@ public class Main {
             private static final long serialVersionUID = -1079681049977214895L;
 
             @Override
-            protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            protected void doGet(HttpServletRequest request, HttpServletResponse response)
                     throws ServletException, IOException {
 
                 log.info("Request handled by thread: {}", Thread.currentThread().getName());
