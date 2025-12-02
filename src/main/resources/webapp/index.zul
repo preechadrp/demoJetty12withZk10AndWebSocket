@@ -25,7 +25,7 @@
 		    // 2. ใช้ .animate() เพื่อเลื่อน Scroll ลงไปที่ความสูงทั้งหมด
 		    $scrollableBox.animate({
 		        scrollTop: scrollHeight
-		    }, 500); // 500 คือระยะเวลาในการเลื่อน (หน่วยมิลลิวินาที) - ทำให้ดูนุ่มนวล
+		    }, 0); // 0 คือระยะเวลาในการเลื่อน (หน่วยมิลลิวินาที) - ทำให้ดูนุ่มนวล
 		}
 
 	    const socket = new WebSocket('ws://localhost:8080/websocket/broadcast'); 
