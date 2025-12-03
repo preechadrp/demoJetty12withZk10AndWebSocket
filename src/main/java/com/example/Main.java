@@ -178,8 +178,6 @@ public class Main {
         //สำหรับ shutdown ด้วย winsw/curl ด้วย
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
 
-            private static final long serialVersionUID = -1079681049977214895L;
-
             @Override
             protected void doGet(HttpServletRequest request, HttpServletResponse response)
                     throws ServletException, IOException {
@@ -224,8 +222,6 @@ public class Main {
         }, "/shutdown");// test link = http://localhost:8080/shutdown
 
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
-
-            private static final long serialVersionUID = -1079681049977214895L;
 
             @Override
             protected void doGet(HttpServletRequest request, HttpServletResponse response)
