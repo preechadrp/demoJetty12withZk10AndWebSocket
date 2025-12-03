@@ -28,17 +28,20 @@
 		    }, 0); // 0 คือระยะเวลาในการเลื่อน (หน่วยมิลลิวินาที) - ทำให้ดูนุ่มนวล
 		}
 
-	    const socket = new WebSocket('ws://localhost:8080/websocket/broadcast'); 
+		const appHostPort001 = window.location.host;
+		const wsUrl001 = 'ws://' + appHostPort001 + '/websocket/broadcast';
+		console.log(wsUrl001);		
+	    const socket001 = new WebSocket(wsUrl001); 
 		
 		// 2. จัดการเหตุการณ์เมื่อเปิดการเชื่อมต่อ
-		socket.onopen = function(e) {
+		socket001.onopen = function(e) {
 		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
 			//MyDisplayArea.html('สถานะ: เชื่อมต่อแล้ว');
 			MyDisplayArea.append('<p>สถานะ: เชื่อมต่อแล้ว</p>');
 		};
 		
 		// 3. จัดการเหตุการณ์เมื่อได้รับข้อความ
-		socket.onmessage = function(event) {
+		socket001.onmessage = function(event) {
 		    // ใช้ jQuery เพิ่มรายการข้อความใหม่เข้าไปใน <ul>
 		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
 			//MyDisplayArea.html(event.data);
@@ -50,7 +53,7 @@
 		};
 		
 		// 4. จัดการเหตุการณ์เมื่อปิดการเชื่อมต่อ
-		socket.onclose = function(event) {
+		socket001.onclose = function(event) {
 			var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
 		    if (event.wasClean) {
 		        //MyDisplayArea.html('สถานะ: ตัดการเชื่อมต่อแล้ว');
@@ -64,13 +67,21 @@
 		};
 		
 		// 5. จัดการเหตุการณ์เมื่อเกิดข้อผิดพลาด
-		socket.onerror = function(error) {
+		socket001.onerror = function(error) {
 		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
 			//MyDisplayArea.html('สถานะ: เกิดข้อผิดพลาด');
 		    MyDisplayArea.append('<p class="test1">สถานะ: เกิดข้อผิดพลาด</p>');
 		    scrollToBottom();
 		};
 		
+		//ป้องกัน idleTimeout
+		setInterval(() => {
+		    if (socket001.readyState === WebSocket.OPEN) {
+		    	socket001.send("ping");
+		        //console.log("ping");
+		    }
+		}, 30000);
+
     ]]>         
 	</script>
 </zk>

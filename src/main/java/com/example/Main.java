@@ -26,7 +26,7 @@ public class Main {
     static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Main.class);
 
     public Server server = null;
-    private int server_port = 8080;
+    private static int server_port = 8080;
     public static Main main = null;
 
     public static void main(String[] args) {
@@ -43,7 +43,7 @@ public class Main {
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
 
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("http://127.0.0.1:8080/shutdown?token=secret123"))
+					.uri(java.net.URI.create("http://127.0.0.1:" + server_port + "/shutdown?token=secret123"))
                     .GET()
                     .build();
 
@@ -78,7 +78,6 @@ public class Main {
             addContext();
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> stopServer()));
-
             server.setStopTimeout(60000l);
             server.start();
 
@@ -121,7 +120,7 @@ public class Main {
     @SuppressWarnings("resource")
 	private void addContext() throws URISyntaxException, IOException {
 
-    	ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);//api ไม่จำเป็นต้องใช้ session
+    	ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
 
         // set web resource
         URL rscURL = Main.class.getResource("/webapp");
@@ -214,8 +213,7 @@ public class Main {
                 new Thread(() -> {
                     try {
                         Thread.sleep(500); // รอให้ response ส่งกลับ
-                        server.stop();
-                        log.info("Jetty server stopped gracefully.");
+                        stopServer();
                     } catch (Exception e) {
                         log.error(e.getMessage(), e);
                     }
