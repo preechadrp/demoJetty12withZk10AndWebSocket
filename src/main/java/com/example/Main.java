@@ -117,63 +117,71 @@ public class Main {
         }
     }
 
-    @SuppressWarnings("resource")
 	private void addContext() throws URISyntaxException, IOException {
 
-    	ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
 
-        // set web resource
-        URL rscURL = Main.class.getResource("/webapp");
-        log.info("Using BaseResource: " + rscURL.toExternalForm());
-        context.setBaseResourceAsString(rscURL.toExternalForm());
-        context.setContextPath("/");
-        context.setWelcomeFiles(new String[] { "index.zul" });
+		// set web resource
+		URL rscURL = Main.class.getResource("/webapp");
+		log.info("Using BaseResource: " + rscURL.toExternalForm());
+		context.setBaseResourceAsString(rscURL.toExternalForm());
+		context.setContextPath("/");
+		context.setWelcomeFiles(new String[] { "index.zul" });
 		if (context.getSessionHandler() != null) {
 			context.getSessionHandler().setMaxInactiveInterval(900);//กรณีใช้ ServletContextHandler จะผ่าน ,test 30/7/68
 		}
 
-        // 1. เพิ่ม Default Servlet, Shutdown, และ Blocking API
-        context.addServlet(new DefaultServlet(), "/");
-        addServlet(context);
+		context.addServlet(new DefaultServlet(), "/");
+		addZkConfig(context);
+		addWebSocket(context);
+		addApacheCXF(context);
+		addApiServlet(context);
 
-        // 2. config for support zk framework
-        org.eclipse.jetty.ee10.servlet.ServletHolder zkLoaderHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
-        zkLoaderHolder.setInitParameter("update-uri", "/zkau");
-        zkLoaderHolder.setInitOrder(1);
-        context.addServlet(zkLoaderHolder, "*.zul");
-        context.addServlet(org.zkoss.zk.au.http.DHtmlUpdateServlet.class, "/zkau/*");
-        context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
-
-        // 3. ตั้งค่า WebSocket (ต้องใช้ JakartaWebSocketServletContainerInitializer)
-        JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
-            // ลงทะเบียน Endpoint
-            container.addEndpoint(BroadcastSocket.class); 
-        });
-
-        // 4. ตั้งค่า CXF (SOAP)
-        // **ส่วนที่แก้ไขเพื่อให้ทำงานได้แน่นอน**
-        Bus bus = BusFactory.getDefaultBus(); // สร้าง Bus หลัก
-        context.setAttribute(BusFactory.class.getName(), bus); // ผูก Bus เข้ากับ Context
-        
-        CXFNonSpringServlet cxfServlet = new CXFNonSpringServlet();
-        cxfServlet.setBus(bus); // ผูก Bus เข้ากับ Servlet โดยตรง **สำคัญ**
-        
-        ServletHolder servletHolder = new ServletHolder(cxfServlet);
-        context.addServlet(servletHolder, "/soapapi/*"); // CXF จัดการที่ /soapapi/*
-
-        // 5. ลงทะเบียน Service
-        EndpointImpl endpoint = new EndpointImpl(bus, new SimpleServiceImpl());
-        endpoint.publish("/simple1");
-        
-        String baseUrl = "http://localhost:8080/soapapi";
-        log.info("Server Started at http://localhost:8080");
-        log.info("WSDL 1 (Simple 1): {}/simple1?wsdl", baseUrl);
-
-        server.setHandler(context);
-    }
+		server.setHandler(context);
+	}
     
-    // ... (เมธอด addServlet เหมือนเดิม) ...
-    private void addServlet(ServletContextHandler context) {
+	private void addZkConfig(ServletContextHandler context) {
+		// 2. config for support zk framework
+	    org.eclipse.jetty.ee10.servlet.ServletHolder zkLoaderHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
+	    zkLoaderHolder.setInitParameter("update-uri", "/zkau");
+	    zkLoaderHolder.setInitOrder(1);
+	    context.addServlet(zkLoaderHolder, "*.zul");
+	    context.addServlet(org.zkoss.zk.au.http.DHtmlUpdateServlet.class, "/zkau/*");
+	    context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
+	}
+
+	private void addWebSocket(ServletContextHandler context) {
+		// 3. ตั้งค่า WebSocket (ต้องใช้ JakartaWebSocketServletContainerInitializer)
+	    JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
+	        // ลงทะเบียน Endpoint
+	        container.addEndpoint(BroadcastSocket.class); 
+	    });
+	}
+
+	@SuppressWarnings("resource")
+	private void addApacheCXF(ServletContextHandler context) {
+		// 4. ตั้งค่า CXF (SOAP)
+		// **ส่วนที่แก้ไขเพื่อให้ทำงานได้แน่นอน**
+		Bus bus = BusFactory.getDefaultBus(); // สร้าง Bus หลัก
+		context.setAttribute(BusFactory.class.getName(), bus); // ผูก Bus เข้ากับ Context
+
+		CXFNonSpringServlet cxfServlet = new CXFNonSpringServlet();
+		cxfServlet.setBus(bus); // ผูก Bus เข้ากับ Servlet โดยตรง **สำคัญ**
+
+		ServletHolder servletHolder = new ServletHolder(cxfServlet);
+		context.addServlet(servletHolder, "/soapapi/*"); // CXF จัดการที่ /soapapi/*
+
+		// 5. ลงทะเบียน Service
+		EndpointImpl endpoint = new EndpointImpl(bus, new SimpleServiceImpl());
+		endpoint.publish("/simple1");
+
+		log.info("Server Started at http://localhost:{}", server_port);
+		log.info("WSDL 1 (Simple 1): http://localhost:{}/soapapi/simple1?wsdl", server_port);
+
+	}
+
+	// ... (เมธอด addServlet เหมือนเดิม) ...
+    private void addApiServlet(ServletContextHandler context) {
 
         //สำหรับ shutdown ด้วย winsw/curl ด้วย
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
