@@ -2,7 +2,7 @@
 <zk>
 	<!-- <window title="Hello World!!" border="normal" width="200px" >  -->
 
-	<div id="div01" apply="com.example.zk.C1">
+	<div id="div01" apply="com.example.zk.Index">
 		<vbox>
 			<hbox>
 				<label value="You are using: ${desktop.webApp.version}" />
