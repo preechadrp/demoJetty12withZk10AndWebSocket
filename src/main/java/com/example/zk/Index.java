@@ -23,6 +23,7 @@ public class Index extends SelectorComposer<Div> {
 	public void doAfterCompose(Div cn) throws Exception {
 		super.doAfterCompose(cn); // สำคัญ ต้องมีถ้าใช้ @Wire
 		System.out.println("cn.getId() :" + cn.getId());
+		System.out.println("btn1.getLabel() :" + btn1.getLabel());
 	}
 
 	@Listen("onClick = #btn1")
