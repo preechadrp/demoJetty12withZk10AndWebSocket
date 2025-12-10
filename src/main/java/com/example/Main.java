@@ -86,7 +86,7 @@ public class Main {
                 int count = 0;
                 while (server.isRunning()) {
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1000);
                         String message = "Server Broadcast #" + (++count) + " @ " + System.currentTimeMillis();
                         // เรียกใช้ BroadcastSocket.broadcast
                         BroadcastSocket.broadcast(message); 

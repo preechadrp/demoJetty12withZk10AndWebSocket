@@ -15,7 +15,7 @@ public class Index extends SelectorComposer<Div> {
 	private static final long serialVersionUID = 1L;
 
 	@Wire
-	public Button btn1;
+	public Button btnClear;
 
 	public Index() {
 	}
@@ -23,10 +23,10 @@ public class Index extends SelectorComposer<Div> {
 	public void doAfterCompose(Div cn) throws Exception {
 		super.doAfterCompose(cn); // สำคัญ ต้องมีถ้าใช้ @Wire
 		System.out.println("cn.getId() :" + cn.getId());
-		System.out.println("btn1.getLabel() :" + btn1.getLabel());
+		System.out.println("btn1.getLabel() :" + btnClear.getLabel());
 	}
 
-	@Listen("onClick = #btn1")
+	@Listen("onClick = #btnClear")
 	public void onClick_btn1() {
 		// test ok 18/1/67
 		System.out.println("onClick_btn1()");

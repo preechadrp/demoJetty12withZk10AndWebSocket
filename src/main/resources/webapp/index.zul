@@ -6,7 +6,7 @@
 		<vbox>
 			<hbox>
 				<label value="You are using: ${desktop.webApp.version}" />
-				<button id="btn1" label="ปุ่มทดสอบ" />
+				<button id="btnClear" label="clear" />
 			</hbox>
 		</vbox>
 		<div id="divMsg" sclass="my-scrollable-box" />
@@ -14,38 +14,43 @@
 	<!-- </window>-->
 	<script defer="true" >
 	<![CDATA[
-	         
-		function scrollToBottom() {
-		    const $scrollableBox = jq(zk.Widget.$('$divMsg'));
-		
-		    // 1. คำนวณตำแหน่งที่จะเลื่อนไป
-		    // $(this).prop('scrollHeight') คือความสูงทั้งหมดของเนื้อหา (รวมส่วนที่มองไม่เห็น)
-		    const scrollHeight = $scrollableBox.prop('scrollHeight');
-		
-		    // 2. ใช้ .animate() เพื่อเลื่อน Scroll ลงไปที่ความสูงทั้งหมด
-		    $scrollableBox.animate({
-		        scrollTop: scrollHeight
-		    }, 0); // 0 คือระยะเวลาในการเลื่อน (หน่วยมิลลิวินาที) - ทำให้ดูนุ่มนวล
-		}
-
+	       
 		const appHostPort001 = window.location.host;
 		const wsUrl001 = 'ws://' + appHostPort001 + '/websocket/broadcast';
 		console.log(wsUrl001);		
-	    const socket001 = new WebSocket(wsUrl001); 
+		const socket001 = new WebSocket(wsUrl001); 
+		const $divMsg = jq(zk.Widget.$('$divMsg'));//ได้เป็น jQuery object
+		const divMsg = $divMsg[0]; //คือ DOM element (DOM คือ Document Object Model)
 		
+		// ป้องกัน timeout
+		setInterval(() => {
+			if (socket001.readyState === WebSocket.OPEN) {
+				socket001.send(".");
+			}
+		}, 30000);
+
+		// Limit 2000 rows
+		setInterval(() => {
+			while (divMsg.children.length > 2000) {
+				divMsg.removeChild(divMsg.firstElementChild);
+			}
+		}, 10000);
+		
+		function scrollToBottom() {
+			divMsg.scrollTop = divMsg.scrollHeight;
+		}
+
 		// 2. จัดการเหตุการณ์เมื่อเปิดการเชื่อมต่อ
 		socket001.onopen = function(e) {
-		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
-			//MyDisplayArea.html('สถานะ: เชื่อมต่อแล้ว');
-			MyDisplayArea.append('<p>สถานะ: เชื่อมต่อแล้ว</p>');
+			//$divMsg.html('สถานะ: เชื่อมต่อแล้ว');
+			$divMsg.append('<p>สถานะ: เชื่อมต่อแล้ว</p>');
 		};
 		
 		// 3. จัดการเหตุการณ์เมื่อได้รับข้อความ
 		socket001.onmessage = function(event) {
 		    // ใช้ jQuery เพิ่มรายการข้อความใหม่เข้าไปใน <ul>
-		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
-			//MyDisplayArea.html(event.data);
-			MyDisplayArea.append('<p class="test2">'+ event.data +'</p>');
+			//$divMsg.html(event.data);
+			$divMsg.append('<p class="test2">'+ event.data +'</p>');
 			scrollToBottom();
 			//แบบส่งไป server แทน
 			//console.log(event.data);
@@ -54,34 +59,24 @@
 		
 		// 4. จัดการเหตุการณ์เมื่อปิดการเชื่อมต่อ
 		socket001.onclose = function(event) {
-			var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
 		    if (event.wasClean) {
-		        //MyDisplayArea.html('สถานะ: ตัดการเชื่อมต่อแล้ว');
-		        MyDisplayArea.append('<p class="test1">สถานะ: ตัดการเชื่อมต่อแล้ว</p>');
+		        //$divMsg.html('สถานะ: ตัดการเชื่อมต่อแล้ว');
+		        $divMsg.append('<p class="test1">สถานะ: ตัดการเชื่อมต่อแล้ว</p>');
 		    } else {
 		        // เช่น server ถูก kill หรือ network มีปัญหา
-		        //MyDisplayArea.html('สถานะ: การเชื่อมต่อขาดหายไป');
-		    	MyDisplayArea.append('<p class="test1">สถานะ: การเชื่อมต่อขาดหายไป</p>');
+		        //$divMsg.html('สถานะ: การเชื่อมต่อขาดหายไป');
+		    	$divMsg.append('<p class="test1">สถานะ: การเชื่อมต่อขาดหายไป</p>');
 		    }
 		    scrollToBottom();
 		};
 		
 		// 5. จัดการเหตุการณ์เมื่อเกิดข้อผิดพลาด
 		socket001.onerror = function(error) {
-		    var MyDisplayArea = jq(zk.Widget.$('$divMsg'));
-			//MyDisplayArea.html('สถานะ: เกิดข้อผิดพลาด');
-		    MyDisplayArea.append('<p class="test1">สถานะ: เกิดข้อผิดพลาด</p>');
+			//$divMsg.html('สถานะ: เกิดข้อผิดพลาด');
+		    $divMsg.append('<p class="test1">สถานะ: เกิดข้อผิดพลาด</p>');
 		    scrollToBottom();
 		};
 		
-		//ป้องกัน idleTimeout
-		setInterval(() => {
-		    if (socket001.readyState === WebSocket.OPEN) {
-		    	socket001.send("ping");
-		        //console.log("ping");
-		    }
-		}, 30000);
-
     ]]>         
 	</script>
 </zk>
