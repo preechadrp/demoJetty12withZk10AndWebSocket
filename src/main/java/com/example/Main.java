@@ -3,6 +3,9 @@ package com.example;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.Executors;
 
 import org.apache.cxf.Bus;
@@ -11,7 +14,6 @@ import org.apache.cxf.jaxws.EndpointImpl;
 import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
 import org.eclipse.jetty.ee10.servlet.DefaultServlet;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
-import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -135,18 +137,37 @@ public class Main {
 		addZkConfig(context);
 		addWebSocket(context);
 		addApacheCXF(context);
-		addApiServlet(context);
+		addApiShutdown(context);
+		addApi(context);
 
 		server.setHandler(context);
 	}
     
-	private void addZkConfig(ServletContextHandler context) {
-		// 2. config for support zk framework
-	    org.eclipse.jetty.ee10.servlet.ServletHolder zkLoaderHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
-	    zkLoaderHolder.setInitParameter("update-uri", "/zkau");
-	    zkLoaderHolder.setInitOrder(1);
-	    context.addServlet(zkLoaderHolder, "*.zul");
-	    context.addServlet(org.zkoss.zk.au.http.DHtmlUpdateServlet.class, "/zkau/*");
+	private void addZkConfig(ServletContextHandler context) throws IOException {
+		//===config for support zk framework
+		
+		//สำคัญที่สุด (เพื่อให้สามารถใช้ org.zkoss.zul.Fileupload ใน jetty ได้)
+		Path uploadDir = Paths.get("./temp/zk-upload");
+        Files.createDirectories(uploadDir);
+		context.setAttribute("jakarta.servlet.context.tempdir", uploadDir.toFile());
+        context.setAttribute("org.zkoss.zk.ui.upload.tempdir", uploadDir.toAbsolutePath().toString());
+
+	    org.eclipse.jetty.ee10.servlet.ServletHolder layoutHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
+	    layoutHolder.setInitParameter("update-uri", "/zkau");
+	    layoutHolder.setInitOrder(1);
+	    context.addServlet(layoutHolder, "*.zul");
+	    
+	    // AU servlet (รับ upload)
+	    org.eclipse.jetty.ee10.servlet.ServletHolder auHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(new org.zkoss.zk.au.http.DHtmlUpdateServlet());
+        auHolder.getRegistration().setMultipartConfig(
+            new jakarta.servlet.MultipartConfigElement(
+                uploadDir.toAbsolutePath().toString(),
+                50L * 1024 * 1024,
+                100L * 1024 * 1024,
+                0
+            )
+        );
+        context.addServlet(auHolder, "/zkau/*");
 	    context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
 	}
 
@@ -168,7 +189,7 @@ public class Main {
 		CXFNonSpringServlet cxfServlet = new CXFNonSpringServlet();
 		cxfServlet.setBus(bus); // ผูก Bus เข้ากับ Servlet โดยตรง **สำคัญ**
 
-		ServletHolder servletHolder = new ServletHolder(cxfServlet);
+		org.eclipse.jetty.ee10.servlet.ServletHolder servletHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(cxfServlet);
 		context.addServlet(servletHolder, "/soapapi/*"); // CXF จัดการที่ /soapapi/*
 
 		// 5. ลงทะเบียน Service
@@ -179,11 +200,9 @@ public class Main {
 		log.info("WSDL 1 (Simple 1): http://localhost:{}/soapapi/simple1?wsdl", server_port);
 
 	}
-
-	// ... (เมธอด addServlet เหมือนเดิม) ...
-    private void addApiServlet(ServletContextHandler context) {
-
-        //สำหรับ shutdown ด้วย winsw/curl ด้วย
+	
+	private void addApiShutdown(ServletContextHandler context) {
+		//สำหรับ shutdown ด้วย winsw/curl ด้วย
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
 
             @Override
@@ -228,6 +247,9 @@ public class Main {
             }
 
         }, "/shutdown");// test link = http://localhost:8080/shutdown
+	}
+
+    private void addApi(ServletContextHandler context) {
 
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
 
