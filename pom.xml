@@ -44,12 +44,6 @@
 		</dependency>
 		
 		<!-- zul config -->
-		<!-- https://mvnrepository.com/artifact/org.zkoss.zk/zul -->
-		<dependency>
-		    <groupId>org.zkoss.zk</groupId>
-		    <artifactId>zul</artifactId>
-		    <version>${zk.version}</version>
-		</dependency>
 		<!-- If you want to use data binding, include this -->
 		<dependency>
 			<groupId>org.zkoss.zk</groupId>
