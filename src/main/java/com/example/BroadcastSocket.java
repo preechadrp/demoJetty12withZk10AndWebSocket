@@ -14,6 +14,36 @@ import jakarta.websocket.server.ServerEndpoint;
 public class BroadcastSocket {
 
 	private static final Set<Session> sessions = Collections.synchronizedSet(new HashSet<>());
+	private static final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+	private static final java.util.concurrent.BlockingQueue<String> queue = new java.util.concurrent.LinkedBlockingQueue<>(10000);
+
+	static {
+		executor.submit(() -> {
+			while (!Thread.currentThread().isInterrupted()) {
+				try {
+					String msg = queue.take();
+
+					// cleanup dead sessions
+					sessions.removeIf(s -> !s.isOpen());
+
+					for (Session session : sessions) {
+						session.getAsyncRemote().sendText(msg);
+					}
+
+					Thread.sleep(10L); // throttle
+
+				} catch (InterruptedException e) {
+					//สำคัญมาก
+					Thread.currentThread().interrupt();
+					break;
+				} catch (Exception e) {
+					System.out.println("Broadcast error");
+				}
+			}
+
+			System.out.println("WebSocket broadcast thread stopped.");
+		});
+	}
 
 	@OnOpen
 	public void onOpen(Session session) {
@@ -34,17 +64,9 @@ public class BroadcastSocket {
 
 	// เมธอดสำหรับ Broadcast
 	public static void broadcast(String message) {
-		synchronized (sessions) {
-			for (Session session : sessions) {
-				if (session.isOpen()) {
-					try {
-						session.getAsyncRemote().sendText(message);
-					} catch (Exception e) {
-						System.err.println("Error broadcasting: " + e.getMessage());
-					}
-				}
-			}
+		if (!queue.offer(message)) { //เก็บเข้า queue ก่อน
+			System.out.println("Queue full, dropping message");
 		}
 	}
-	
+
 }

@@ -87,7 +87,7 @@
 		// จัดการเหตุการณ์เมื่อปิดการเชื่อมต่อ
 		socket001.onclose = function(event) {
 			let p = document.createElement("p"); 
-			p.className = "status1"; 
+			p.className = "test1"; 
 		    if (event.wasClean) {
 		        p.textContent = "ตัดการเชื่อมต่อแล้ว"; 
 		    } else {
@@ -103,7 +103,7 @@
 		// จัดการเหตุการณ์เมื่อเกิดข้อผิดพลาด
 		socket001.onerror = function(error) {
 		    let p = document.createElement("p"); 
-			p.className = "status1"; 
+			p.className = "test1"; 
 			p.textContent = "เกิดข้อผิดพลาด"; 
 		    divMsg.appendChild(p);
 		    if (autoScroll) {
