@@ -16,11 +16,24 @@
 	<![CDATA[
 	       
 		const appHostPort001 = window.location.host;
-		const wsUrl001 = 'ws://' + appHostPort001 + '/websocket/broadcast';
-		console.log(wsUrl001);		
+		let wsUrl001 = 'ws://' + appHostPort001 + '/websocket/broadcast';
+		if (window.location.protocol === "https:") {
+			wsUrl001 = 'wss://' + appHostPort001 + '/websocket/broadcast';
+		}
+		console.log("wsUrl001 : ", wsUrl001);		
 		const socket001 = new WebSocket(wsUrl001); 
 		const $divMsg = jq(zk.Widget.$('$divMsg'));//ได้เป็น jQuery object
 		const divMsg = $divMsg[0]; //คือ DOM element (DOM คือ Document Object Model)
+		let msgQueue = [];
+		let autoScroll = true; 
+		
+		divMsg.addEventListener("scroll", () => { 
+			autoScroll = (divMsg.scrollTop + divMsg.clientHeight >= divMsg.scrollHeight - 5); 
+		});
+		
+		window.addEventListener("beforeunload", () => {
+		    socket001.close();
+		});
 		
 		// ป้องกัน timeout
 		setInterval(() => {
@@ -28,53 +41,74 @@
 				socket001.send(".");
 			}
 		}, 30000);
-
-		// Limit 2000 rows
-		setInterval(() => {
-			while (divMsg.children.length > 2000) {
-				divMsg.removeChild(divMsg.firstElementChild);
-			}
-		}, 10000);
 		
-		function scrollToBottom() {
-			divMsg.scrollTop = divMsg.scrollHeight;
-		}
+		//แสดงข้อมูล
+		setInterval(() => {
+			if (msgQueue.length === 0) return;
+			let batchSize = msgQueue.length > 1000 ? 200 : 50;
+			let batch = msgQueue.splice(0, batchSize); 
+			let frag = document.createDocumentFragment();
+			
+			for (let msg of batch) {
+				let p = document.createElement("p");
+				p.textContent = msg; 
+				frag.appendChild(p);
+			}
+			divMsg.appendChild(frag);
+			
+			// Limit 2000 rows
+			let excess = divMsg.children.length - 2000;
+			while (excess-- > 0) {
+			    divMsg.removeChild(divMsg.firstElementChild);
+			}
+			
+			if (autoScroll) {
+			    divMsg.scrollTop = divMsg.scrollHeight;
+			}
+		}, 50);
 
-		// 2. จัดการเหตุการณ์เมื่อเปิดการเชื่อมต่อ
+		// จัดการเหตุการณ์เมื่อเปิดการเชื่อมต่อ
 		socket001.onopen = function(e) {
-			//$divMsg.html('สถานะ: เชื่อมต่อแล้ว');
-			$divMsg.append('<p>สถานะ: เชื่อมต่อแล้ว</p>');
+			let p = document.createElement("p"); 
+			p.textContent = "เชื่อมต่อแล้ว"; 
+			divMsg.appendChild(p);
 		};
 		
-		// 3. จัดการเหตุการณ์เมื่อได้รับข้อความ
+		// จัดการเหตุการณ์เมื่อได้รับข้อความ
 		socket001.onmessage = function(event) {
-		    // ใช้ jQuery เพิ่มรายการข้อความใหม่เข้าไปใน <ul>
-			//$divMsg.html(event.data);
-			$divMsg.append('<p class="test2">'+ event.data +'</p>');
-			scrollToBottom();
+			if (msgQueue.length < 5000) { //ป้องกัน memory
+			    msgQueue.push(event.data);
+			}
 			//แบบส่งไป server แทน
 			//console.log(event.data);
 			//zAu.send(new zk.Event(null, 'onUpdateTxt1', event.data, {toServer:true}));
 		};
 		
-		// 4. จัดการเหตุการณ์เมื่อปิดการเชื่อมต่อ
+		// จัดการเหตุการณ์เมื่อปิดการเชื่อมต่อ
 		socket001.onclose = function(event) {
+			let p = document.createElement("p"); 
+			p.className = "status1"; 
 		    if (event.wasClean) {
-		        //$divMsg.html('สถานะ: ตัดการเชื่อมต่อแล้ว');
-		        $divMsg.append('<p class="test1">สถานะ: ตัดการเชื่อมต่อแล้ว</p>');
+		        p.textContent = "ตัดการเชื่อมต่อแล้ว"; 
 		    } else {
 		        // เช่น server ถูก kill หรือ network มีปัญหา
-		        //$divMsg.html('สถานะ: การเชื่อมต่อขาดหายไป');
-		    	$divMsg.append('<p class="test1">สถานะ: การเชื่อมต่อขาดหายไป</p>');
+		    	p.textContent = "การเชื่อมต่อขาดหายไป"; 
 		    }
-		    scrollToBottom();
+		    divMsg.appendChild(p);
+		    if (autoScroll) {
+		        divMsg.scrollTop = divMsg.scrollHeight;
+		    }
 		};
 		
-		// 5. จัดการเหตุการณ์เมื่อเกิดข้อผิดพลาด
+		// จัดการเหตุการณ์เมื่อเกิดข้อผิดพลาด
 		socket001.onerror = function(error) {
-			//$divMsg.html('สถานะ: เกิดข้อผิดพลาด');
-		    $divMsg.append('<p class="test1">สถานะ: เกิดข้อผิดพลาด</p>');
-		    scrollToBottom();
+		    let p = document.createElement("p"); 
+			p.className = "status1"; 
+			p.textContent = "เกิดข้อผิดพลาด"; 
+		    divMsg.appendChild(p);
+		    if (autoScroll) {
+		        divMsg.scrollTop = divMsg.scrollHeight;
+		    }
 		};
 		
     ]]>         
