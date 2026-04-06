@@ -1,8 +1,8 @@
 package com.example;
 
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
@@ -13,24 +13,44 @@ import jakarta.websocket.server.ServerEndpoint;
 @ServerEndpoint("/websocket/broadcast")
 public class BroadcastSocket {
 
-	private static final Set<Session> sessions = Collections.synchronizedSet(new HashSet<>());
+	private static final Set<Session> sessions = ConcurrentHashMap.newKeySet();
+	private static final Map<Session, Boolean> sending = new ConcurrentHashMap<>();
 	private static final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
 	private static final java.util.concurrent.BlockingQueue<String> queue = new java.util.concurrent.LinkedBlockingQueue<>(10000);
-
+	
 	static {
 		executor.submit(() -> {
 			while (!Thread.currentThread().isInterrupted()) {
 				try {
 					String msg = queue.take();
 
-					// cleanup dead sessions
-					sessions.removeIf(s -> !s.isOpen());
+					// cleanup dead sessions + flags
+                    sessions.removeIf(s -> {
+                        if (!s.isOpen()) {
+                            sending.remove(s);
+                            return true;
+                        }
+                        return false;
+                    });
 
 					for (Session session : sessions) {
-						session.getAsyncRemote().sendText(msg);
-					}
+						
+						Boolean isSending = sending.get(session);
+					    if (isSending == null || isSending) {
+					        continue; // ยังส่งไม่เสร็จ → ข้าม
+					    }
 
-					Thread.sleep(10L); // throttle
+					    sending.put(session, true);
+					    
+					    session.getAsyncRemote().sendText(msg, result -> {
+					        sending.put(session, false);
+
+					        if (!result.isOK()) {
+					        	System.out.println("Send failed session=" + session.getId() + result.getException());
+					        }
+					    });
+					    
+					}
 
 				} catch (InterruptedException e) {
 					//สำคัญมาก
@@ -47,18 +67,25 @@ public class BroadcastSocket {
 
 	@OnOpen
 	public void onOpen(Session session) {
+		session.getAsyncRemote().setSendTimeout(5000);
+		session.setMaxIdleTimeout(30 * 60 * 1000L);
+		
 		sessions.add(session);
+		sending.put(session, false);
 		System.out.println("WebSocket session opened: " + session.getId());
 	}
 
 	@OnClose
 	public void onClose(Session session) {
 		sessions.remove(session);
+		sending.remove(session);
 		System.out.println("WebSocket session closed: " + session.getId());
 	}
 
 	@OnError
 	public void onError(Session session, Throwable throwable) {
+		sessions.remove(session);
+		sending.remove(session);
 		System.err.println("WebSocket Error: " + throwable.getMessage());
 	}
 
