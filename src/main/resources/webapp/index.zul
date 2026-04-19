@@ -14,12 +14,9 @@
 	<!-- </window>-->
 	<script defer="true" >
 	<![CDATA[
-	       
-		const appHostPort001 = window.location.host;
-		let wsUrl001 = 'ws://' + appHostPort001 + '/websocket/broadcast';
-		if (window.location.protocol === "https:") {
-			wsUrl001 = 'wss://' + appHostPort001 + '/websocket/broadcast';
-		}
+        const ctx = '${request.contextPath}';
+		const wsScheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const wsUrl001 = wsScheme + '//' + location.host + ctx + '/websocket/broadcast';
 		console.log("wsUrl001 : ", wsUrl001);		
 		const socket001 = new WebSocket(wsUrl001); 
 		const $divMsg = jq(zk.Widget.$('$divMsg'));//ได้เป็น jQuery object
