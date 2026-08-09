@@ -17,6 +17,7 @@ import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.thread.VirtualThreadPool;
 
 import jakarta.servlet.ServletException;
@@ -32,38 +33,8 @@ public class Main {
     public static Main main = null;
 
     public static void main(String[] args) {
-        if (args != null && args.length > 0 && args[0].trim().equals("shutdown")) {
-            stopServiceByUrl();
-        } else {
-            main = new Main();
-            main.startServer();
-        }
-    }
-    
-    private static void stopServiceByUrl() {
-        try {
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-					.uri(java.net.URI.create("http://127.0.0.1:" + server_port + "/shutdown?token=secret123"))
-                    .GET()
-                    .build();
-
-            // ส่ง Request และรับ Response
-            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-
-            // แสดงผลลัพธ์
-            if (response.statusCode() != 200) {
-                log.info("Status code: {}", response.statusCode());
-                log.info(response.body());
-            }
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
-    public static void stopService(String[] args) {
-        main.stopServer();
+		main = new Main();
+		main.startServer();
     }
 
     public void startServer() {
@@ -79,8 +50,19 @@ public class Main {
 
             addContext();
 
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> stopServer()));
             server.setStopTimeout(60000l);
+			server.setStopAtShutdown(true);
+			server.addEventListener(new LifeCycle.Listener() {
+				@Override
+				public void lifeCycleStopping(LifeCycle event) {
+					log.info("Jetty is stopping gracefully");
+				}
+
+				@Override
+				public void lifeCycleStopped(LifeCycle event) {
+					log.info("Jetty fully stopped");
+				}
+			});
             server.start();
 
             // ตัวอย่างการ Broadcast จาก Server
@@ -107,18 +89,6 @@ public class Main {
         }
     }
 
-    public void stopServer() {
-        try {
-            if (server != null && server.isRunning()) {
-                log.warn("init stop");
-                server.stop();
-                log.info("Jetty server stopped gracefully");
-            }
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
 	private void addContext() throws URISyntaxException, IOException {
 
 		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -137,7 +107,6 @@ public class Main {
 		addZkConfig(context);
 		addWebSocket(context);
 		addApacheCXF(context);
-		addApiShutdown(context);
 		addApi(context);
 
 		server.setHandler(context);
@@ -159,13 +128,10 @@ public class Main {
 	    
 	    // AU servlet (รับ upload)
 	    org.eclipse.jetty.ee10.servlet.ServletHolder auHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(new org.zkoss.zk.au.http.DHtmlUpdateServlet());
+		long maxFileSize = 50 * 1024 * 1024; // 50 MB
+		long maxRequestSize = 100L * 1024 * 1024; // 100 MB
         auHolder.getRegistration().setMultipartConfig(
-            new jakarta.servlet.MultipartConfigElement(
-                uploadDir.toAbsolutePath().toString(),
-                50L * 1024 * 1024,
-                100L * 1024 * 1024,
-                0
-            )
+				new jakarta.servlet.MultipartConfigElement(uploadDir.toAbsolutePath().toString(), maxFileSize, maxRequestSize, 0)
         );
         context.addServlet(auHolder, "/zkau/*");
 	    context.addEventListener(new org.zkoss.zk.ui.http.HttpSessionListener()); //zk Listener
@@ -201,54 +167,6 @@ public class Main {
 
 	}
 	
-	private void addApiShutdown(ServletContextHandler context) {
-		//สำหรับ shutdown ด้วย winsw/curl ด้วย
-        context.addServlet(new jakarta.servlet.http.HttpServlet() {
-
-            @Override
-            protected void doGet(HttpServletRequest request, HttpServletResponse response)
-                    throws ServletException, IOException {
-
-                log.info("Requested Shutdown");
-
-                //จำกัดให้เรียกได้เฉพาะ localhost
-                String remoteAddr = request.getRemoteAddr();
-                if (!"127.0.0.1".equals(remoteAddr) && !"0:0:0:0:0:0:0:1".equals(remoteAddr)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().println("Access denied");
-                    log.warn("Rejected shutdown from: {}", remoteAddr);
-                    return;
-                }
-
-                //ตรวจ token
-                String tokenParam = request.getParameter("token");
-                if (!"secret123".equals(tokenParam)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().println("Invalid token");
-                    log.warn("Invalid token");
-                    return;
-                }
-
-                //เริ่มหยุด Jetty
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().println("Shutting down Jetty...");
-
-                log.warn(">>> Shutdown requested via /shutdown from {}", remoteAddr);
-
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(500); // รอให้ response ส่งกลับ
-                        stopServer();
-                    } catch (Exception e) {
-                        log.error(e.getMessage(), e);
-                    }
-                }).start();
-
-            }
-
-        }, "/shutdown");// test link = http://localhost:8080/shutdown
-	}
-
     private void addApi(ServletContextHandler context) {
 
         context.addServlet(new jakarta.servlet.http.HttpServlet() {
