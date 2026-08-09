@@ -30,11 +30,11 @@ public class Main {
 
     public Server server = null;
     private static int server_port = 8080;
-    public static Main main = null;
+	public static Main MAIN_APP = null;
 
     public static void main(String[] args) {
-		main = new Main();
-		main.startServer();
+		MAIN_APP = new Main();
+		MAIN_APP.startServer();
     }
 
     public void startServer() {
