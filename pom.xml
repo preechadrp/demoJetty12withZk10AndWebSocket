@@ -24,15 +24,15 @@
 		</dependency>
 		
 		<!-- WebSocket support -->
-       	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty.ee10.websocket/jetty-ee10-websocket-jakarta-server -->
+       	<!-- https://mvnrepository.com/artifact/org.eclipse.jetty.ee11.websocket/jetty-ee11-websocket-jakarta-server -->
 		<dependency>
-		    <groupId>org.eclipse.jetty.ee10.websocket</groupId>
-		    <artifactId>jetty-ee10-websocket-jakarta-server</artifactId>
+		    <groupId>org.eclipse.jetty.ee11.websocket</groupId>
+		    <artifactId>jetty-ee11-websocket-jakarta-server</artifactId>
 		    <version>${jetty-version}</version>
 		    <exclusions>
 		    	<exclusion>
-		    		<groupId>org.eclipse.jetty.ee10</groupId>
-		    		<artifactId>jetty-ee10-annotations</artifactId>
+		    		<groupId>org.eclipse.jetty.ee11</groupId>
+		    		<artifactId>jetty-ee11-annotations</artifactId>
 		    	</exclusion>
 		    </exclusions>
 		</dependency>
@@ -87,8 +87,8 @@
     			<version>${jetty-version}</version>
     		</dependency>
     		<dependency>
-    			<groupId>org.eclipse.jetty.ee10</groupId>
-    			<artifactId>jetty-ee10-servlet</artifactId>
+    			<groupId>org.eclipse.jetty.ee11</groupId>
+    			<artifactId>jetty-ee11-servlet</artifactId>
     			<version>${jetty-version}</version>
     		</dependency>
     		<dependency>

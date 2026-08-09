@@ -12,9 +12,10 @@ import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.jaxws.EndpointImpl;
 import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
-import org.eclipse.jetty.ee10.servlet.DefaultServlet;
-import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
-import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
+import org.eclipse.jetty.ee11.servlet.DefaultServlet;
+import org.eclipse.jetty.ee11.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee11.servlet.ServletHolder;
+import org.eclipse.jetty.ee11.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer; // Import ที่ถูกต้อง
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.component.LifeCycle;
@@ -121,13 +122,13 @@ public class Main {
 		context.setAttribute("jakarta.servlet.context.tempdir", uploadDir.toFile());
         context.setAttribute("org.zkoss.zk.ui.upload.tempdir", uploadDir.toAbsolutePath().toString());
 
-	    org.eclipse.jetty.ee10.servlet.ServletHolder layoutHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
+		ServletHolder layoutHolder = new ServletHolder(org.zkoss.zk.ui.http.DHtmlLayoutServlet.class);
 	    layoutHolder.setInitParameter("update-uri", "/zkau");
 	    layoutHolder.setInitOrder(1);
 	    context.addServlet(layoutHolder, "*.zul");
 	    
 	    // AU servlet (รับ upload)
-	    org.eclipse.jetty.ee10.servlet.ServletHolder auHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(new org.zkoss.zk.au.http.DHtmlUpdateServlet());
+		ServletHolder auHolder = new ServletHolder(new org.zkoss.zk.au.http.DHtmlUpdateServlet());
 		long maxFileSize = 50 * 1024 * 1024; // 50 MB
 		long maxRequestSize = 100L * 1024 * 1024; // 100 MB
         auHolder.getRegistration().setMultipartConfig(
@@ -139,10 +140,10 @@ public class Main {
 
 	private void addWebSocket(ServletContextHandler context) {
 		// 3. ตั้งค่า WebSocket (ต้องใช้ JakartaWebSocketServletContainerInitializer)
-	    JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
+		JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, container) -> {
 	        // ลงทะเบียน Endpoint
-	        container.addEndpoint(BroadcastSocket.class); 
-	    });
+			container.addEndpoint(BroadcastSocket.class);
+		});
 	}
 
 	@SuppressWarnings("resource")
@@ -155,7 +156,7 @@ public class Main {
 		CXFNonSpringServlet cxfServlet = new CXFNonSpringServlet();
 		cxfServlet.setBus(bus); // ผูก Bus เข้ากับ Servlet โดยตรง **สำคัญ**
 
-		org.eclipse.jetty.ee10.servlet.ServletHolder servletHolder = new org.eclipse.jetty.ee10.servlet.ServletHolder(cxfServlet);
+		ServletHolder servletHolder = new ServletHolder(cxfServlet);
 		context.addServlet(servletHolder, "/soapapi/*"); // CXF จัดการที่ /soapapi/*
 
 		// 5. ลงทะเบียน Service
