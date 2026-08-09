@@ -1,4 +1,4 @@
--jetty 12.0.x
--zk 10.0.0-jakarta
+-jetty 12.1.x
+-zk 10.3.x-jakarta
 -websocket
--apache CXF
+-apache CXF 4.2.x
